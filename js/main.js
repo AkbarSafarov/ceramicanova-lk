@@ -165,6 +165,40 @@ $(function() {
             console.log("Форма прошла проверку, можно отправлять");
         }
     });
+
+
+    $.extend($.remodal.defaults, {
+        hashTracking: false
+    });
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const popupParam = urlParams.get("modal");
+    if (popupParam) {
+        $(document).ready(function() {
+            const modalElement = document.querySelector('[data-remodal-id="' + popupParam + '"]');
+            if (modalElement) {
+                const inst = $(modalElement).remodal();
+                inst.open();
+            }
+        });
+    }
+
+    $(document).on('opening', '.remodal', function () {
+        const id = this.getAttribute('data-remodal-id');
+        if (id) {
+            const newUrl = new URL(window.location.href);
+            newUrl.searchParams.set("modal", id);
+            newUrl.hash = '';
+            window.history.replaceState({}, '', newUrl.toString());
+        }
+    });
+
+    $(document).on('closing', '.remodal', function () {
+        const newUrl = new URL(window.location.href);
+        newUrl.searchParams.delete("modal");
+        newUrl.hash = '';
+        window.history.replaceState({}, '', newUrl.toString());
+    });
 });
 
 document.addEventListener("DOMContentLoaded", function() {
@@ -262,27 +296,7 @@ document.addEventListener("DOMContentLoaded", function() {
         });
     }
 
-    const sliderItems = document.querySelectorAll('.slider_item');
-
-
-    if (sliderItems.length) {
-        sliderItems.forEach((slider) => {
-            const sliderWrap = slider.querySelector('.swiper');
-            const wrap = sliderWrap.getAttribute('data-id');
-            const arrow = sliderWrap.getAttribute('data-arrow');
-
-            const swiperSimilar = new Swiper(`.${wrap}`, {
-                loop: true,
-                slidesPerView: 1,
-                spaceBetween: 20,
-                lazy: true,
-                navigation: {
-                    nextEl: `.next_${arrow}`,
-                    prevEl: `.prev_${arrow}`,
-                }
-            });
-        })
-    }
+    
 
     const favorityeItems = document.querySelectorAll('.favorite_list_item .item');
 
@@ -317,6 +331,7 @@ document.addEventListener("DOMContentLoaded", function() {
             }
 
             minusBtn.addEventListener('click', () => {
+                console.log(123)
                 let qty = parseInt(input.value) || 1;
                 if (qty > 1) {
                     input.value = qty - 1;
