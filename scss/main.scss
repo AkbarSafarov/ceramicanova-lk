@@ -1261,6 +1261,7 @@
                         display: flex;
                         align-items: start;
                         flex-wrap: wrap;
+                        justify-content: end;
 
                         .stoke {
                             text-align: left;
@@ -1583,16 +1584,11 @@
         }
 
         .catalog__itm__title {
-            font-weight: 700;
-            font-size: 18px;
-            line-height: 144%;
-            color: var(--black);
-            text-align: left;
+            
             margin: 0 0 14px;
             flex: 1 1 auto;
             width: 100%;
             transition: all .3s;
-            letter-spacing: 0;
         }
 
         &:hover {
