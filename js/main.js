@@ -75,11 +75,12 @@ $(function() {
         }
     });
 
-    $('.form_button').on('click', function(e) {
-        let form = $(this).parents('form');
+    $('.popup-form__body form').on('submit', function(e) {
+
+        let form = $(this);
         let hasErrors = false;
 
-        $(this).parents('form').find('.field').each(function() {
+        form.find('.field').each(function() {
             // Валидация текстовых полей
             var valueInput = $(this).find('input').val();
             if ($(this).hasClass('required') && valueInput == '') {
@@ -154,7 +155,7 @@ $(function() {
             }
         }
 
-        if ($(this).closest('form').find('.field').hasClass('incorrect-phone') || $(this).closest('form').find('.field').hasClass('error')) {
+        if (form.find('.field').hasClass('incorrect-phone') || form.find('.field').hasClass('error')) {
             e.preventDefault();
         } else {
             e.preventDefault(); // пока для теста
@@ -296,7 +297,18 @@ document.addEventListener("DOMContentLoaded", function() {
         });
     }
 
-    
+    const LoginMenuLi = document.querySelectorAll('.login_menu li:not(.my_cabinet)');
+
+    if (LoginMenuLi.length) {
+
+        LoginMenuLi.forEach((item) => {
+            item.addEventListener('click', function(e) {
+                e.preventDefault(); // для теста 
+                myCabinet.innerHTML = item.innerHTML
+            });
+        })
+        
+    }
 
     const favorityeItems = document.querySelectorAll('.favorite_list_item .item');
 
