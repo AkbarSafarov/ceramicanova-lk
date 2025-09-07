@@ -1,4 +1,423 @@
+// Функция для отправки данных на сервер
+async function sendFormData(url, formData, formType) {
+    try {
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: JSON.stringify(formData)
+        });
+
+        const result = await response.json();
+        
+        return {
+            success: response.ok,
+            data: result,
+            status: response.status
+        };
+    } catch (error) {
+        console.error('Ошибка отправки формы:', error);
+        return {
+            success: false,
+            data: { message: 'Ошибка соединения с сервером' },
+            status: 0
+        };
+    }
+}
+
+function showFormError(form, message, field = null) {
+    if (field) {
+        const fieldElement = form.find(`[name="${field}"], [placeholder*="${field}"]`).closest('.field');
+        if (fieldElement.length) {
+            fieldElement.addClass('error');
+            fieldElement.find('.error_text').remove();
+            fieldElement.append(`<div class="error_text server-error">${message}</div>`);
+            return;
+        }
+    }
+    
+    form.find('.server-error-general').remove();
+    form.prepend(`<div class="error_text server-error-general" style="margin-bottom: 15px; color: #ff4444;">${message}</div>`);
+}
+
+function clearServerErrors(form) {
+    form.find('.server-error, .server-error-general').remove();
+    form.find('.field').removeClass('server-error');
+}
+
+$('.login_modal form').on('submit', async function(e) {
+    e.preventDefault();
+    
+    let form = $(this);
+    let hasErrors = false;
+    
+    clearServerErrors(form);
+
+    form.find('.field').each(function() {
+        var valueInput = $(this).find('input').val();
+        if ($(this).hasClass('required') && valueInput == '') {
+            $(this).addClass('error');
+            if (!$(this).find('.error_text').length) {
+                $(this).append('<div class="error_text error_text_r">Поле обязательно для заполнения</div>');
+            }
+            hasErrors = true;
+        }
+
+        if ($(this).hasClass('required') && $(this).find('input[type="checkbox"]').length) {
+            if (!$(this).find('input[type="checkbox"]').is(":checked")) {
+                $(this).addClass('error no_checked');
+                if (!$(this).find('.error_text').length) {
+                    $(this).append('<div class="error_text error_text_r">Поле обязательно для заполнения</div>');
+                }
+                hasErrors = true;
+            }
+        }
+    });
+
+    if (form.find('.field').hasClass('incorrect-phone') || hasErrors) {
+        return;
+    }
+
+    const formData = {
+        email: form.find('input[type="text"]').val(),
+        password: form.find('input[type="password"]').val(),
+        remember: form.find('input[type="checkbox"]').is(':checked'),
+        action: 'login'
+    };
+
+    const submitBtn = form.find('input[type="submit"]');
+    const originalValue = submitBtn.val();
+    submitBtn.val('Вход...').prop('disabled', true);
+
+    const result = await sendFormData('/api/auth/login', formData, 'login');
+
+    if (result.success) {
+        console.log('Авторизация успешна:', result.data);
+        
+        if (result.data.redirect) {
+            window.location.href = result.data.redirect;
+        } else {
+            window.location.reload();
+        }
+    } else {
+        submitBtn.val(originalValue).prop('disabled', false);
+        
+        if (result.status === 422 && result.data.errors) {
+            Object.keys(result.data.errors).forEach(field => {
+                showFormError(form, result.data.errors[field][0], field);
+            });
+        } else if (result.status === 401) {
+            showFormError(form, result.data.message || 'Неверный email или пароль');
+        } else {
+            showFormError(form, result.data.message || 'Произошла ошибка при входе');
+        }
+    }
+});
+
+$('.reg_modal form').on('submit', async function(e) {
+    e.preventDefault();
+    
+    let form = $(this);
+    let hasErrors = false;
+    
+    clearServerErrors(form);
+
+    form.find('.field').each(function() {
+        var valueInput = $(this).find('input').val();
+        if ($(this).hasClass('required') && valueInput == '') {
+            $(this).addClass('error');
+            if (!$(this).find('.error_text').length) {
+                $(this).append('<div class="error_text error_text_r">Поле обязательно для заполнения</div>');
+            }
+            hasErrors = true;
+        }
+
+        if ($(this).hasClass('required') && $(this).find('input[type="checkbox"]').length) {
+            if (!$(this).find('input[type="checkbox"]').is(":checked")) {
+                $(this).addClass('error no_checked');
+                if (!$(this).find('.error_text').length) {
+                    $(this).append('<div class="error_text error_text_r">Поле обязательно для заполнения</div>');
+                }
+                hasErrors = true;
+            }
+        }
+    });
+
+    let passwordField = form.find('input[placeholder="Новый пароль"]');
+    let confirmField = form.find('input[placeholder="Подтверждение пароля"]');
+
+    if (passwordField.length > 0) {
+        let password = passwordField.val().trim();
+        let confirmPassword = confirmField.val().trim();
+
+        if (password.length < 6) {
+            let parent = passwordField.closest('.field');
+            parent.addClass('error');
+            parent.find('.error_text').remove();
+            parent.append('<div class="error_text">Пароль должен быть не менее 6 символов</div>');
+            hasErrors = true;
+        }
+
+        if (password !== confirmPassword) {
+            let parent = confirmField.closest('.field');
+            parent.addClass('error');
+            parent.find('.error_text').remove();
+            parent.append('<div class="error_text">Пароли не совпадают</div>');
+            hasErrors = true;
+        }
+    }
+
+    if (form.find('.field').hasClass('incorrect-phone') || hasErrors) {
+        return;
+    }
+
+    const formData = {
+        organization: form.find('input[placeholder="Название организации *"]').val(),
+        city: form.find('input[placeholder="Город *"]').val(),
+        name: form.find('input[placeholder="ФИО *"]').val(),
+        email: form.find('input[placeholder="E-mail *"]').val(),
+        password: form.find('input[placeholder="Новый пароль"]').val(),
+        password_confirmation: form.find('input[placeholder="Подтверждение пароля"]').val(),
+        privacy_accepted: form.find('input[type="checkbox"]').is(':checked'),
+        action: 'register'
+    };
+
+    const submitBtn = form.find('input[type="submit"]');
+    const originalValue = submitBtn.val();
+    submitBtn.val('Регистрация...').prop('disabled', true);
+
+    const result = await sendFormData('/api/auth/register', formData, 'register');
+
+    if (result.success) {
+        console.log('Регистрация успешна:', result.data);
+        
+        if (form.parents('.popup-form').find('.popup-form-thanks').length) {
+            form.parents('.popup-form').addClass('success');
+        }
+    } else {
+        submitBtn.val(originalValue).prop('disabled', false);
+        
+        if (result.status === 422 && result.data.errors) {
+            Object.keys(result.data.errors).forEach(field => {
+                let message = Array.isArray(result.data.errors[field]) 
+                    ? result.data.errors[field][0] 
+                    : result.data.errors[field];
+                showFormError(form, message, field);
+            });
+        } else if (result.status === 409) {
+            showFormError(form, result.data.message || 'Пользователь с таким email уже существует', 'email');
+        } else {
+            showFormError(form, result.data.message || 'Произошла ошибка при регистрации');
+        }
+    }
+});
+
+$('.restore_modal form').on('submit', async function(e) {
+    e.preventDefault();
+    
+    let form = $(this);
+    let hasErrors = false;
+    
+    clearServerErrors(form);
+
+    // Валидация email
+    const emailField = form.find('input[type="text"]');
+    const email = emailField.val().trim();
+    
+    if (!email) {
+        emailField.closest('.field').addClass('error');
+        emailField.closest('.field').append('<div class="error_text error_text_r">Поле обязательно для заполнения</div>');
+        hasErrors = true;
+    }
+
+    if (hasErrors) {
+        return;
+    }
+
+    const formData = {
+        email: email,
+        action: 'password_reset'
+    };
+
+    const submitBtn = form.find('input[type="submit"]');
+    const originalValue = submitBtn.val();
+    submitBtn.val('Отправка...').prop('disabled', true);
+
+    const result = await sendFormData('/api/auth/password-reset', formData, 'password_reset');
+
+    if (result.success) {
+        console.log('Запрос на восстановление отправлен:', result.data);
+        
+        if (form.parents('.popup-form').find('.popup-form-thanks').length) {
+            form.parents('.popup-form').addClass('success');
+        }
+    } else {
+        submitBtn.val(originalValue).prop('disabled', false);
+        
+        if (result.status === 404) {
+            showFormError(form, 'Пользователь с таким email не найден', 'email');
+        } else {
+            showFormError(form, result.data.message || 'Произошла ошибка при отправке запроса');
+        }
+    }
+});
+
+$('.change_modal form').on('submit', async function(e) {
+    e.preventDefault();
+    
+    let form = $(this);
+    let hasErrors = false;
+    
+    clearServerErrors(form);
+
+    form.find('.field').each(function() {
+        var valueInput = $(this).find('input').val();
+        if ($(this).hasClass('required') && valueInput == '') {
+            $(this).addClass('error');
+            if (!$(this).find('.error_text').length) {
+                $(this).append('<div class="error_text error_text_r">Поле обязательно для заполнения</div>');
+            }
+            hasErrors = true;
+        }
+    });
+
+    let passwordField = form.find('input[placeholder="Новый пароль"]');
+    let confirmField = form.find('input[placeholder="Подтверждение пароля"]');
+
+    if (passwordField.length > 0) {
+        let password = passwordField.val().trim();
+        let confirmPassword = confirmField.val().trim();
+
+        if (password.length < 6) {
+            let parent = passwordField.closest('.field');
+            parent.addClass('error');
+            parent.find('.error_text').remove();
+            parent.append('<div class="error_text">Пароль должен быть не менее 6 символов</div>');
+            hasErrors = true;
+        }
+
+        if (password !== confirmPassword) {
+            let parent = confirmField.closest('.field');
+            parent.addClass('error');
+            parent.find('.error_text').remove();
+            parent.append('<div class="error_text">Пароли не совпадают</div>');
+            hasErrors = true;
+        }
+    }
+
+    if (hasErrors) {
+        return;
+    }
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const formData = {
+        email: form.find('input[placeholder="E-mail"]').val(),
+        password: form.find('input[placeholder="Новый пароль"]').val(),
+        password_confirmation: form.find('input[placeholder="Подтверждение пароля"]').val(),
+        token: urlParams.get('token') || '', // Токен из URL
+        action: 'password_change'
+    };
+
+    const submitBtn = form.find('input[type="submit"]');
+    const originalValue = submitBtn.val();
+    submitBtn.val('Изменение...').prop('disabled', true);
+
+    const result = await sendFormData('/api/auth/password-change', formData, 'password_change');
+
+    if (result.success) {
+        console.log('Пароль успешно изменен:', result.data);
+        
+        if (form.parents('.popup-form').find('.popup-form-thanks').length) {
+            form.parents('.popup-form').addClass('success');
+        }
+    } else {
+        submitBtn.val(originalValue).prop('disabled', false);
+        
+        if (result.status === 422 && result.data.errors) {
+            Object.keys(result.data.errors).forEach(field => {
+                let message = Array.isArray(result.data.errors[field]) 
+                    ? result.data.errors[field][0] 
+                    : result.data.errors[field];
+                showFormError(form, message, field);
+            });
+        } else if (result.status === 400) {
+            showFormError(form, result.data.message || 'Ссылка для смены пароля недействительна или истекла');
+        } else {
+            showFormError(form, result.data.message || 'Произошла ошибка при смене пароля');
+        }
+    }
+});
+
+$('.field input, .field textarea').on('input', function() {
+    $(this).closest('.field').find('.server-error').remove();
+    $(this).closest('.field').removeClass('server-error');
+    $(this).closest('form').find('.server-error-general').remove();
+});
+
+
+/*
+УСПЕШНЫЕ ОТВЕТЫ:
+
+Авторизация:
+{
+  "success": true,
+  "message": "Успешная авторизация",
+  "redirect": "/dashboard" // опционально
+}
+
+Регистрация:
+{
+  "success": true,
+  "message": "Регистрация успешна. На ваш email отправлено письмо для подтверждения."
+}
+
+Восстановление пароля:
+{
+  "success": true,
+  "message": "Ссылка для восстановления пароля отправлена на ваш email"
+}
+
+Смена пароля:
+{
+  "success": true,
+  "message": "Пароль успешно изменен"
+}
+
+ОШИБКИ:
+
+Валидационные ошибки (HTTP 422):
+{
+  "success": false,
+  "message": "Ошибки валидации",
+  "errors": {
+    "email": ["Поле email обязательно для заполнения"],
+    "password": ["Минимальная длина пароля 6 символов"]
+  }
+}
+
+Неверные учетные данные (HTTP 401):
+{
+  "success": false,
+  "message": "Неверный email или пароль"
+}
+
+Пользователь уже существует (HTTP 409):
+{
+  "success": false,
+  "message": "Пользователь с таким email уже зарегистрирован"
+}
+
+Общие ошибки (HTTP 500):
+{
+  "success": false,
+  "message": "Внутренняя ошибка сервера"
+}
+*/
+
 $(function() {
+
 
     $('.phone_input input').on('blur', function() {
         let phoneWrapper = $(this).parents('.field'),
@@ -67,7 +486,6 @@ $(function() {
     $('.field select').on('change', function() {
         var field = $(this).closest('.field');
 
-        // При выборе значения удаляем ошибку
         if ($(this).val() && $(this).val() !== '' && $(this).val() !== '0' && $(this).val() !== 'default') {
             field.removeClass('error');
             field.find('.jq-selectbox').removeClass('error');
@@ -75,7 +493,7 @@ $(function() {
         }
     });
 
-    $('.popup-form__body form').on('submit', function(e) {
+    /*$('.popup-form__body form').on('submit', function(e) {
 
         let form = $(this);
         let hasErrors = false;
@@ -165,7 +583,7 @@ $(function() {
 
             console.log("Форма прошла проверку, можно отправлять");
         }
-    });
+    });*/
 
 
     $.extend($.remodal.defaults, {
@@ -303,7 +721,6 @@ document.addEventListener("DOMContentLoaded", function() {
 
         LoginMenuLi.forEach((item) => {
             item.addEventListener('click', function(e) {
-                e.preventDefault(); // для теста 
                 myCabinet.innerHTML = item.innerHTML
             });
         })
