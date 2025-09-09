@@ -706,26 +706,26 @@ document.addEventListener("DOMContentLoaded", function() {
         toggle.setAttribute('aria-label', isHidden ? 'Скрыть пароль' : 'Показать пароль');
     }
 
-    const myCabinet = document.querySelector('.my_cabinet');
+    // const myCabinet = document.querySelector('.my_cabinet');
 
-    if (myCabinet) {
-        myCabinet.addEventListener('click', function(e) {
-            e.preventDefault();
-            document.querySelector('.login_menu').classList.toggle('show');
-        });
-    }
+    // if (myCabinet) {
+    //     myCabinet.addEventListener('click', function(e) {
+    //         e.preventDefault();
+    //         document.querySelector('.login_menu').classList.toggle('show');
+    //     });
+    // }
 
-    const LoginMenuLi = document.querySelectorAll('.login_menu li:not(.my_cabinet)');
+    // const LoginMenuLi = document.querySelectorAll('.login_menu li:not(.my_cabinet)');
 
-    if (LoginMenuLi.length) {
+    // if (LoginMenuLi.length) {
 
-        LoginMenuLi.forEach((item) => {
-            item.addEventListener('click', function(e) {
-                myCabinet.innerHTML = item.innerHTML
-            });
-        })
+    //     LoginMenuLi.forEach((item) => {
+    //         item.addEventListener('click', function(e) {
+    //             myCabinet.innerHTML = item.innerHTML
+    //         });
+    //     })
         
-    }
+    // }
 
     const favorityeItems = document.querySelectorAll('.favorite_list_item .item');
 
